@@ -8,11 +8,13 @@ from __future__ import print_function, division
 from geometry_msgs.msg import PointStamped, PointStamped, Twist
 from std_msgs.msg import Header Float64
 from neato_node.msg import Bump
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from numpy.random import randn, random_sample
 from datetime import datetime
+from occupancy_field import OccupancyField as of
 import statistics
 import numpy as np
 import time, math, rospy
@@ -20,26 +22,19 @@ import time, math, rospy
 class ParticleFilter(object):
     """particle filtering of a neato's location in a known map"""
 
-    def __init__(self, sensor_model):
+    def __init__(self):
         """initialize node, ROS things, etc."""
         rospy.init_node("ParticleFilter")
-        self.sensor_model = sensor_model
-        # subscribe to odom?
-        # rospy.Subscriber('/bump', Bump, self.process_bump)
-
-class SensorModel(object):
-    """sensor model for the laser scan"""
-
-    def __init__(self):
         rospy.Subscriber('/scan', LaserScan, self.process_scan)
-
-        self.xs_bl = None   # list of xs from lidar in base link frame
-        self.ys_bl = None   # list of ys from lidar in base link frame
+        self.xs_bl = None       # list of xs from lidar in base link frame
+        self.ys_bl = None       # list of ys from lidar in base link frame
+        self.particles = None   # list of particle objects, initialized later
 
 
     def process_scan(self, message):
-        """take in scan data, returns x and y values in baselink ref frame"""
-        ranges = m.ranges
+        """take in scan data, returns x and y values in baselink ref frameself.
+           omits points with 0 range value."""
+        ranges = message.ranges
         xs = []
         ys = []
         for i in range(len(ranges)):
@@ -50,14 +45,33 @@ class SensorModel(object):
                 yf = math.sin(theta)*r
                 xs.append(xf)
                 ys.append(yf)
-        self.xs = xs
-        self.ys = ys
+
+        # store vals in pf object attributes
+        self.xs_bl = xs
+        self.ys_bl = ys
+
+    def initialize_pf(self):
+        """intialize the particle filter, called once"""
+        # initialize all particle objects and assign to self.particles
+        #
+    def get_weights(self):
+        """update the weights at a particular timestep"""
+
+    def normalize_weights(self):
+        """normalize weights for sampling"""
+
+    def propogate_points(self):
+        """uses the motor model to move the particles to new values. the motor
+           model will have important things like adding noise. we'll have to
+           feed it time steps to track odom in to get the right delta pos"""
+
 
 class Particle(object):
     """particle class for specific attributes and methods that represent the
        sensor model."""
 
-    def __init__(self, x_pos, y_pos, orient, sensor_model):
+    def __init__(self, x_pos, y_pos, orient):
+        self.id = None      # particle ID for tracking
         self.x = x_pos
         self.y = y_pos
         self.w = orient
@@ -65,16 +79,14 @@ class Particle(object):
         self.x_map = None
         self.y_map = None
         self.weight = None
-        self.sensor_model = sensor_model
 
-    def particles_to_map(self):
-        """takes laser scan data local to the partcle's pose and converts into
-           xs and ys in the map coordinate frame.
 
-           updates particle attributes for x_map and y_map"""
+    def particles_to_map(self, xs, ys):
+        """takes laser scan in base link at specific particle pose and converts
+           to xs and ys in the map coordinate frame."""
 
            # length x 2 array of all laser scan points
-           lsr = np.array([self.sensor_model.xs_bl, self.sensor_model.ys_bl])
+           lsr = np.array([xs, ys])
            lsr = np.transpose(lsr)
 
            # negate orientation and rotate
@@ -92,12 +104,24 @@ class Particle(object):
            parts_map = np.array([x_moved, y_moved])
            return None
 
-    def get_particle_weight(self):
-        """take list of laser data from particle location in map coordinates
 
-        define a subset of points to look at for computational speed
-        for point in points:
-        """
+    def get_particle_weight(self):
+        """gets the particle's weight by comparing laser scan to map."""
+
+        self.particles_to_map()     # map all particles with latest scan data
+
+        # loop through points
+        weight = 0
+        for i in range(length(self.x_map)):
+            x = self.x_map[i]
+            y = self.y_map[i]
+            dist = of.get_closest_obstacle_distance(x,y)
+            # check for nan values
+            if not isnan(dist):
+                sub_weights.append(1/dist)
+
+        # store the particle weight into its attribute
+        self.weight = weight
 
     def update_particles(self):
         """ update the position and orientation of the particles based on the
@@ -106,3 +130,7 @@ class Particle(object):
         make sure angles work out, for when you add past 360 degrees
 
         """
+
+    def run_particle(self):
+        """run all the particle functions we want to do for each particle for
+           simplicity"""

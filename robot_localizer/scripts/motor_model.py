@@ -30,7 +30,7 @@ class motor_model(object):
 		self.tf = TFHelper()
 		self.real_pose = None
 		self.particle_array = []
-		self.num_particles = 10
+		self.num_particles = 15
 		self.create_particle_array()
 		self.sd_filter = self.num_particles/3.0 #standard deviation for random sampling
 		self.sd_position = .1 #standard deviation of position noise
@@ -82,8 +82,12 @@ class motor_model(object):
 			noisy_particle.id = i
 			new_array.append(noisy_particle)
 		self.particle_array = new_array
+		#print('start')
+		#for particle in self.particle_array:
+		#	print(particle.weight)
 		
 	def return_particle_with_noise(self, particle, x_pos, y_pos, theta):
+		"returns the particle with updated position and added noise"
 		x_noise = np.random.normal(loc = x_pos, scale = self.sd_position)
 		y_noise = np.random.normal(loc = y_pos, scale = self.sd_position)
 		theta = np.random.normal(loc = theta, scale = self.sd_theta)
@@ -133,8 +137,8 @@ class motor_model(object):
 			if(self.real_pose != None):
 				self.create_robot_marker(self.real_pose, self.pose)
 				self.update_markers()
-				self.resample_particles(1,1,1)
 				self.sort_particles_by_weight()
+				self.resample_particles(1,1,1)
 				self.pub2.publish(self.robot_marker)
 				self.pub3.publish(self.markerArray)
 				self.rate.sleep()

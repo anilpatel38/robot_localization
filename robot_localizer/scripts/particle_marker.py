@@ -40,7 +40,8 @@ class particle_marker(object):
 			self.marker.id = id_number
 			self.markerArray.markers.append(self.marker)
 			id_number += 1
-
+	def sort_add_noise(self):
+		pass
 	def create_particle_marker(self, x,y):
 		"creates marker with position x,y"
 		self.marker = Marker()
@@ -76,3 +77,5 @@ class particle_marker(object):
 if __name__ == '__main__':
 	node = particle_marker()
 	node.run()
+
+

@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 import rospy
+import numpy as np
 import math
 import random
 from helper_functions import TFHelper
@@ -29,35 +30,67 @@ class motor_model(object):
 		self.tf = TFHelper()
 		self.real_pose = None
 		self.particle_array = []
+		self.num_particles = 10
 		self.create_particle_array()
+		self.sd_filter = self.num_particles/3.0 #standard deviation for random sampling
+		self.sd_position = .1 #standard deviation of position noise
+		self.sd_theta = 5/3.0 #standard deviation (bounded by 5 degrees) of theta noise
 
 	def create_particle_array(self):
 		"creates initial particles"
 		self.particle_array = []
-		for i in range(10):
+		for i in range(self.num_particles):
 			x_pos = random.randint(1,100)
 			x_pos = x_pos/100.0
 			y_pos = random.randint(1,100)
 			y_pos = y_pos/100.0
 			particle = Particle(x_pos, y_pos, 1)
 			particle.id = i
+			particle.weight = random.randint(1,100)
 			self.particle_array.append(particle)
-
 
 	def update_markers(self):
 		"updates all markers"
 		self.markerArray = MarkerArray()
 		for particle in self.particle_array:
 			if(self.real_pose != None):
-				print(self.real_pose[2])
 				x_pos = self.real_pose[0] + particle.x*math.sin(-(self.real_pose[2]))
 				y_pos = self.real_pose[1] + particle.y*math.cos((self.real_pose[2]))
 				self.create_particle_marker(x_pos, y_pos)
 			self.marker.id = particle.id
 			self.markerArray.markers.append(self.marker)
 
-	def sort_add_noise(self):
-		pass
+	def sort_particles_by_weight(self):
+		"sorts particles by their weight, normalizes weight, and id is redone"
+		total_weight = sum(particle.weight for particle in self.particle_array)
+		if(total_weight > 0):
+			for particle in self.particle_array:
+				particle.weight = particle.weight/(total_weight*1.0)
+		self.particle_array.sort(key=lambda x: x.weight, reverse = True)
+		for i in range(self.num_particles):
+			self.particle_array[i].id = i
+
+	def resample_particles(self, x_pos, y_pos, theta):
+		"takes current odom reading and updates particles with noise"
+		new_array = []
+		for i in range(self.num_particles):
+			sample_id = self.num_particles
+			while(sample_id >= self.num_particles):
+				sample = np.random.normal(loc = 0.0, scale = self.sd_filter)
+				sample_id = int(abs(sample))
+			noisy_particle = self.return_particle_with_noise(self.particle_array[i], x_pos, y_pos, theta)
+			noisy_particle.id = i
+			new_array.append(noisy_particle)
+		self.particle_array = new_array
+		
+	def return_particle_with_noise(self, particle, x_pos, y_pos, theta):
+		x_noise = np.random.normal(loc = x_pos, scale = self.sd_position)
+		y_noise = np.random.normal(loc = y_pos, scale = self.sd_position)
+		theta = np.random.normal(loc = theta, scale = self.sd_theta)
+		particle.x = x_noise
+		particle.y = y_noise
+		particle.w = theta
+		return particle
 
 	def create_particle_marker(self, x,y):
 		"creates marker with position x,y"
@@ -100,6 +133,8 @@ class motor_model(object):
 			if(self.real_pose != None):
 				self.create_robot_marker(self.real_pose, self.pose)
 				self.update_markers()
+				self.resample_particles(1,1,1)
+				self.sort_particles_by_weight()
 				self.pub2.publish(self.robot_marker)
 				self.pub3.publish(self.markerArray)
 				self.rate.sleep()

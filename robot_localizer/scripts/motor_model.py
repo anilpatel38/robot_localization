@@ -49,14 +49,16 @@ class motor_model(object):
 		self.markerArray = MarkerArray()
 		for particle in self.particle_array:
 			if(self.real_pose != None):
-				x_pos = self.real_pose[0] + particle.x*math.cos(- (self.real_pose[2]))
-				y_pos = self.real_pose[1] #+ particle.y#- particle.y*math.sin( (self.real_pose[2]))
+				print(self.real_pose[2])
+				x_pos = self.real_pose[0] + particle.x*math.sin(-(self.real_pose[2]))
+				y_pos = self.real_pose[1] + particle.y*math.cos((self.real_pose[2]))
 				self.create_particle_marker(x_pos, y_pos)
 			self.marker.id = particle.id
 			self.markerArray.markers.append(self.marker)
 
 	def sort_add_noise(self):
 		pass
+
 	def create_particle_marker(self, x,y):
 		"creates marker with position x,y"
 		self.marker = Marker()
@@ -76,12 +78,16 @@ class motor_model(object):
 		self.pose = data.pose.pose
 		self.real_pose = self.tf.convert_pose_to_xy_and_theta(self.pose)
 
-	def create_robot_marker(self, pose):
+	def create_robot_marker(self, real_pose, pose):
 		self.robot_marker = Marker()
 		self.robot_marker.header.frame_id = "odom"
 		self.robot_marker.type = self.robot_marker.CUBE
-		self.robot_marker.pose.position.x = pose[0]
-		self.robot_marker.pose.position.y = pose[1]
+		self.robot_marker.pose.position.x = real_pose[0]
+		self.robot_marker.pose.position.y = real_pose[1]
+		self.robot_marker.pose.orientation.x = self.pose.orientation.x
+		self.robot_marker.pose.orientation.y = self.pose.orientation.y
+		self.robot_marker.pose.orientation.z = self.pose.orientation.z
+		self.robot_marker.pose.orientation.w = self.pose.orientation.w
 		scale = .25
 		self.robot_marker.scale.x = scale
 		self.robot_marker.scale.y = scale
@@ -92,7 +98,7 @@ class motor_model(object):
 	def run(self):
 		while not rospy.is_shutdown():
 			if(self.real_pose != None):
-				self.create_robot_marker(self.real_pose)
+				self.create_robot_marker(self.real_pose, self.pose)
 				self.update_markers()
 				self.pub2.publish(self.robot_marker)
 				self.pub3.publish(self.markerArray)

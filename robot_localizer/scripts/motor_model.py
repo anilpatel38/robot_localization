@@ -50,13 +50,16 @@ class motor_model(object):
 			self.particle_array.append(particle)
 
 	def update_markers(self):
-		"updates all markers"
+		"updates all particle markers"
 		self.markerArray = MarkerArray()
 		for particle in self.particle_array:
-			if(self.real_pose != None):
-				x_pos = self.real_pose[0] + particle.x*math.sin(-(self.real_pose[2]))
-				y_pos = self.real_pose[1] + particle.y*math.cos((self.real_pose[2]))
-				self.create_particle_marker(x_pos, y_pos)
+			x_pos = particle.x
+			y_pos = particle.y
+			print(x_pos, y_pos)
+			#if(self.real_pose != None):
+			#	x_pos = self.real_pose[0]
+			#	y_pos = self.real_pose[1]
+			self.create_particle_marker(x_pos, y_pos)
 			self.marker.id = particle.id
 			self.markerArray.markers.append(self.marker)
 
@@ -109,7 +112,7 @@ class motor_model(object):
 		self.marker.scale.y = scale
 		self.marker.scale.z = scale
 		self.marker.color.a = 1
-		self.marker.color.g= 1
+		self.marker.color.g = 1
 
 	def read_pos(self, data):
 		self.pose = data.pose.pose
@@ -137,8 +140,8 @@ class motor_model(object):
 			if(self.real_pose != None):
 				self.create_robot_marker(self.real_pose, self.pose)
 				self.update_markers()
-				self.sort_particles_by_weight()
-				self.resample_particles(1,1,1)
+				#self.sort_particles_by_weight()
+				#self.resample_particles(1,1,1)
 				self.pub2.publish(self.robot_marker)
 				self.pub3.publish(self.markerArray)
 				self.rate.sleep()

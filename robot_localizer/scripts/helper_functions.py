@@ -49,6 +49,12 @@ class TFHelper(object):
         return (t.translation_from_matrix(inverse_transform_matrix),
                 t.quaternion_from_matrix(inverse_transform_matrix))
 
+
+    def convert_angle_to_quaternion(self, angle):
+        "returns quaternion"
+        return t.quaternion_from_euler(0,0, math.radians(angle))
+
+
     def convert_pose_to_xy_and_theta(self, pose):
         """ Convert pose (geometry_msgs.Pose) to a (x,y,yaw) tuple """
         orientation_tuple = (pose.orientation.x,

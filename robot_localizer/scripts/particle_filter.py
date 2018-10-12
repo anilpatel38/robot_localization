@@ -38,7 +38,7 @@ class ParticleFilter(object):
 		self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size = 10)
 		self.pub2 = rospy.Publisher('Robot_marker', Marker, queue_size = 10)
 		self.pub3 = rospy.Publisher('visualization_marker_array', MarkerArray, queue_size = 10)
-		self.particle_pub = rospy.Publisher("particlecloud", PointCloud, queue_size=10)
+		self.particle_pub = rospy.Publisher("particle_cloud", PointCloud, queue_size=10)
 		rospy.Subscriber('/odom', Odometry, self.read_pos)
 		self.rate = rospy.Rate(20)
 		self.xs_bl = []   # list of xs from lidar in base link frame
